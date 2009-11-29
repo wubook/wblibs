@@ -25,19 +25,36 @@
 # This File is Part of WuBook Labs Researches:
 #   http://wubook.net/
 #   http://en.wubook.net/
+
 import stackless
+import logging
 from twisted.internet import defer, reactor
 
-""" This module allows to run normal code suites as deferred objects,
-    without creating expensive threads, but using stackless.
+""" 
+  This module allows to run normal code suites as deferred objects,
+  without creating expensive threads, but using stackless.
 
-    There is a limit: deferred suites are FIFO'ed and not concurrent
+  There is a limit: deferred suites are FIFO'ed and not concurrent
 """
+
+def _aerror(*a, **kw):
+  logging.error('AsyncIt Error: %s' % str(a[0]))
 
 class Twiless:
 
   _stc= stackless.channel()
   _initalized= 0
+  from threading import Lock
+  _initlock= Lock()
+  del Lock
+  _running= 1
+
+  @staticmethod
+  def sendExit():
+    Twiless._stc.send(('exit',1,1,1))
+  @staticmethod
+  def stopStacklessThread():
+    Twiless.sendExit()
 
   @staticmethod
   def _underground(d, f, *a, **kw):
@@ -52,23 +69,38 @@ class Twiless:
     md.addErrback(_eb)
 
   @staticmethod
+  def launchStacklessThread():
+    Twiless._initlock.acquire()
+    if not Twiless._initalized:
+      Twiless._initalized= 1
+      logging.debug('Initializing Stackless Thread')
+      d= reactor.callInThread(Twiless.stackless_thread)
+    Twiless._initlock.release()
+
+  @staticmethod
   def stackless_thread():
-    """ Runs the Stackless thread. A Channel is created, which
-        wait for activities. Once had it, it launch a function
-        on background.
+    """ 
+      Runs the Stackless thread. A Channel is created, which
+      wait for activities. Once had it, it launch a function
+      on background.
 
-        You must run a stackless_thread doing something like:
+      You must run a stackless_thread doing something like:
 
-          reactor.callInThread(stackless_thread)
+        reactor.callInThread(stackless_thread)
 
-        After that, to defer a function f, simply do:
-          
-          df= send_stackless_activity(f, *a, **kw)
+      After that, to defer a function f, simply do:
+        
+        df= send_stackless_activity(f, *a, **kw)
 
-        df is a deferred."""
-    while 1:
+      df is a deferred."""
+    while Twiless._running:
       try:
+        logging.debug('Entering Receving Loop...')
         d, f, a, kw= Twiless._stc.receive()
+        if d == 'exit': 
+          Twiless._running= 0
+          logging.debug('Exiting (command received) From StacklessThread Loop...')
+          break
         t= stackless.tasklet(Twiless._underground)
         t(d, f, a, kw)
         stackless.schedule()
@@ -78,13 +110,12 @@ class Twiless:
   @staticmethod
   def asyncIt(f, *a, **kw):
     if not Twiless._initalized:
-      reactor.callInThread(Twiless.stackless_thread)
+      Twiless.launchStacklessThread()
     d= defer.Deferred()
     t= stackless.tasklet(Twiless._stc.send)
     t((d, f, a, kw))
     stackless.schedule()
+    d.addErrback(_aerror)
     return d
 
-def send_stackless_activity(f, *a, **kw):
-  """ This allows to launch a function in an async way. A Deferred is returned """
-  return Twiless.asyncIt(f, *a, **kw)
+asyncIt= Twiless.asyncIt

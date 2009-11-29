@@ -28,7 +28,7 @@
 
 
 import logging
-from twiless import send_stackless_activity
+from twiless import asyncIt
 from Queue import Queue
 from twisted.internet import reactor
 from twisted.internet.task import LoopingCall
@@ -83,25 +83,19 @@ class IWuScheduler(Queue):
     return res
 
   def end_scop(self, *a, **kw):
-    self.dbg('Stackless Operation End')
     self.launched+= 1
+    self.dbg('Stackless (%d) Operation End' % self.launched)
     if self.each and not self.launched % self.each:
-      send_stackless_activity(self.maop)
+      self.dbg('Launching Maintanance Operation')
+      asyncIt(self.maop)
 
   def launch_scop(self):
     self.dbg('Launching Stackless Operation')
     if self.blocked: return
-    d= send_stackless_activity(self.scop)
+    d= asyncIt(self.scop)
     d.addCallback(self.end_scop)
     d.addErrback(self.errb)
 
   def block(self):
     self.dbg('Blocking Scheduler')
     self.blocked= 1
-
-class FooScheduless(IWuScheduler):
-  freq= 3
-  def scop(self, *a, **kw):
-    print 'scop'
-  def errb(self, *a, **kw):
-    print 'an error occurred!!!'
