@@ -22,13 +22,17 @@
 # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 #
-# This File is Part of WuBook Labs Researches:
+# This File is Part of WuBook Labs Researches (Tourism Technologies as
+# booking online engine and channel management):
+#
 #   http://wubook.net/
 #   http://en.wubook.net/
 #
-# This file is inspired by:
+# This work is inspired by:
 #
 #  http://www.tempestnetworks.com/11/multi-threaded-twisted-stackless-integration/
+#
+# Thanks to Nohero (Marco Giusti, marco.giusti ,at, gmail ,dot, com)
 #
 
 import stackless
