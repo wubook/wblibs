@@ -28,7 +28,7 @@
 
 
 import logging
-from twiless import asyncIt
+from twiless import deferToStackless
 from Queue import Queue
 from twisted.internet import reactor
 from twisted.internet.task import LoopingCall
@@ -87,12 +87,12 @@ class IWuScheduler(Queue):
     self.dbg('Stackless (%d) Operation End' % self.launched)
     if self.each and not self.launched % self.each:
       self.dbg('Launching Maintanance Operation')
-      asyncIt(self.maop)
+      deferToStackless(self.maop)
 
   def launch_scop(self):
     self.dbg('Launching Stackless Operation')
     if self.blocked: return
-    d= asyncIt(self.scop)
+    d= deferToStackless(self.scop)
     d.addCallback(self.end_scop)
     d.addErrback(self.errb)
 

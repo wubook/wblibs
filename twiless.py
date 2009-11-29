@@ -20,11 +20,16 @@
 # (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
 # LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
 # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THISimport logging
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 #
 # This File is Part of WuBook Labs Researches:
 #   http://wubook.net/
 #   http://en.wubook.net/
+#
+# This file is inspired by:
+#
+#  http://www.tempestnetworks.com/11/multi-threaded-twisted-stackless-integration/
+#
 
 import stackless
 import logging
@@ -34,24 +39,40 @@ from twisted.internet import defer, reactor
   This module allows to run normal code suites as deferred objects,
   without creating expensive threads, but using stackless.
 
-  There is a limit: deferred suites are FIFO'ed and not concurrent
+  In fact, twiless borns to substitute deferToThread() with a less
+  expensive deferToStackless
+
+  There is a limit: deferred suites are FIFO'ed and not concurrent.
+
+  Design: your application has two main loops: Twisted Loop and 
+  Stackless Loop. Both loops are neverending and we need to stop
+  them to stop app. 
+
+  The usage of deferToStackless() installs a SystemEventTrigger
+  so that when reactor.stop() is called, Stackless scheduler
+  will stop too.
+
+  This is completely automatic. So, don't worry: just use
+  deferToStackless() async'ing your f()
 """
+
+TWILES_EXIT_KEY= 'exit'
 
 def _aerror(*a, **kw):
   logging.error('AsyncIt Error: %s' % str(a[0]))
 
 class Twiless:
 
+  from threading import Lock
   _stc= stackless.channel()
   _initalized= 0
-  from threading import Lock
+  _running= 1
   _initlock= Lock()
   del Lock
-  _running= 1
 
   @staticmethod
   def sendExit():
-    Twiless._stc.send(('exit',1,1,1))
+    Twiless._stc.send((TWILES_EXIT_KEY,1,1,1))
   @staticmethod
   def stopStacklessThread():
     Twiless.sendExit()
@@ -70,11 +91,15 @@ class Twiless:
 
   @staticmethod
   def launchStacklessThread():
+    if Twiless._initalized: 
+      return
     Twiless._initlock.acquire()
     if not Twiless._initalized:
       Twiless._initalized= 1
-      logging.debug('Initializing Stackless Thread')
       d= reactor.callInThread(Twiless.stackless_thread)
+      st= reactor.addSystemEventTrigger
+      stopf= Twiless.stopStacklessThread
+      st('before', 'shutdown', stopf)
     Twiless._initlock.release()
 
   @staticmethod
@@ -95,17 +120,15 @@ class Twiless:
       df is a deferred."""
     while Twiless._running:
       try:
-        logging.debug('Entering Receving Loop...')
         d, f, a, kw= Twiless._stc.receive()
-        if d == 'exit': 
+        if d == TWILES_EXIT_KEY: 
           Twiless._running= 0
-          logging.debug('Exiting (command received) From StacklessThread Loop...')
           break
         t= stackless.tasklet(Twiless._underground)
         t(d, f, a, kw)
         stackless.schedule()
       except Exception, ss:
-        logging.error(str(ss))
+        pass
 
   @staticmethod
   def asyncIt(f, *a, **kw):
@@ -118,4 +141,4 @@ class Twiless:
     d.addErrback(_aerror)
     return d
 
-asyncIt= Twiless.asyncIt
+deferToStackless= Twiless.asyncIt
