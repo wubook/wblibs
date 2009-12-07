@@ -102,21 +102,28 @@ def cache(func, prefix= '', skipfirst= 0):
 
 class Twiched:
   """ Simply Sublass Providing _loadValues() """
-  def __init__(self, twichedSetUp= None):
+  def __init__(self, twichedSetUp= None, useInstanceId= 1):
     self.keys= set()
+    self.useInstanceId= useInstanceId
     if twichedSetUp:
-      key= key_values(self._loadValues, str(self.__class__), 1)
+      key= key_values(self._loadValues, self._twichedPrefix(), 1)
       mc.set(str(hash(key)), twichedSetUp)
-    self._loadValues= cache(self._loadValues, str(self.__class__), 1)
+    self._loadValues= cache(self._loadValues, self._twichedPrefix(), 1)
 
   def _onLoadValues(self, *a, **kw):
     pass
 
+  def _twichedPrefix(self):
+    if self.useInstanceId:
+      return str(id(self))
+    else:
+      return self.__class__
+
   def getValues(self, *a, **kw):
     res, key, cached= self._loadValues(*a, **kw)
-    if not cached or not getattr(self, '_twichedInitialized', False):
+    if not cached:# or not getattr(self, '_twichedInitialized', False):
       self._onLoadValues(res)
-    self._twichedInitialized= 1
+    #self._twichedInitialized= 1
     self.keys.add(key)
     return res
 
