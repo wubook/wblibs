@@ -58,10 +58,12 @@ class TwichedMc:
 mc= TwichedMc()
 
 def key_values(f, prefix, skipfirst, *a, **kw):
+  if not a and not kw:
+    return (prefix,)
   varnames= f.func_code.co_varnames
   if skipfirst:
     varnames= varnames[1:]
-  vardefas= f.func_defaults
+  vardefas= f.func_defaults or {}
   n= len(varnames) - len(vardefas)
   t= [prefix]
   i= -1
@@ -79,27 +81,38 @@ def cache(func, prefix= '', skipfirst= 0):
   def _(*a, **kw):
     t= key_values(func, prefix, skipfirst, *a, **kw)
     key= str(hash(t))
-    print t,key
     obj = mc.get(key)
     if not obj:
-      print 'Loading Values....'
       ret = func(*a, **kw)
       mc.set(key, ret)
-      return ret, key
-    print 'Cached Values....'
-    return obj, key
-  #_.func_name= 'twiched_%s' % func.func_name 
+      return ret, key, False
+    return obj, key, True
   return _
 
 class Twiched:
-  """ Simply Sublass Providing _load_values() """
-  def __init__(self):
+  """ Simply Sublass Providing _loadValues() """
+  def __init__(self, twichedSetUp= None):
     self.keys= set()
-    self._load_values= cache(self._load_values, self.__class__, 1)
-  def get_values(self, *a, **kw):
-    res, key= self._load_values(*a, **kw)
+    #if twichedSetUp:
+      #key= key_values(self._loadValues, str(self.__class__), 1)
+      #mc.set(str(hash(key)), twichedSetUp)
+    self._loadValues= cache(self._loadValues, str(self.__class__), 1)
+
+  def _onLoadValues(self, *a, **kw):
+    pass
+
+  def getValues(self, *a, **kw):
+    res, key, cached= self._loadValues(*a, **kw)
+    self._onLoadValues(res)
     self.keys.add(key)
     return res
+
   def refresh(self):
-    mc.delete_multi(self.keys)
+    mc.mc.delete_multi(self.keys)
     self.keys= set()
+
+
+class Foo(Twiched):
+  def _loadValues(self, *a, **kw):
+    return [1,2,3]
+
