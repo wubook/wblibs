@@ -30,6 +30,7 @@
 #   http://en.wubook.net/
 #
 
+import logging
 import memcache
 def _mc():
   mc = memcache.Client(['127.0.0.1:11211'], debug=0)
@@ -38,18 +39,28 @@ def _mc():
 mc= _mc()
 
 class TwichedMc:
+
   def __init__(self, h= '127.0.0.1', p= 11211, d= 0):
     self.s= ['%s:%d' % (h,p)], d
     self.mc = memcache.Client(*self.s)
+
   def reinit(self):
+    logging.debug('Reinitializing Memcache Client...')
     self.mc = memcache.Client(*self.s)
 
+  def connected(self):
+    return self.mc.servers[0].socket
+
   def get(self, k):
+    if not self.connected():
+      self.reinit()
     try:
       return self.mc.get(k)
     except:
       self.reinit()
   def set(self, k, v):
+    if not self.connected():
+      self.reinit()
     try:
       return self.mc.set(k, v)
     except:
@@ -93,9 +104,9 @@ class Twiched:
   """ Simply Sublass Providing _loadValues() """
   def __init__(self, twichedSetUp= None):
     self.keys= set()
-    #if twichedSetUp:
-      #key= key_values(self._loadValues, str(self.__class__), 1)
-      #mc.set(str(hash(key)), twichedSetUp)
+    if twichedSetUp:
+      key= key_values(self._loadValues, str(self.__class__), 1)
+      mc.set(str(hash(key)), twichedSetUp)
     self._loadValues= cache(self._loadValues, str(self.__class__), 1)
 
   def _onLoadValues(self, *a, **kw):
@@ -103,7 +114,9 @@ class Twiched:
 
   def getValues(self, *a, **kw):
     res, key, cached= self._loadValues(*a, **kw)
-    self._onLoadValues(res)
+    if not cached or not getattr(self, '_twichedInitialized', False):
+      self._onLoadValues(res)
+    self._twichedInitialized= 1
     self.keys.add(key)
     return res
 
