@@ -106,18 +106,24 @@ class Twiched:
     self.keys= set()
     self.useInstanceId= useInstanceId
     if twichedSetUp:
-      key= key_values(self._loadValues, self._twichedPrefix(), 1)
+      key= key_values(self._loadValues, self._getTwichedPrefix(), 1)
       mc.set(str(hash(key)), twichedSetUp)
-    self._loadValues= cache(self._loadValues, self._twichedPrefix(), 1)
+    self._loadValues= cache(self._loadValues, self._getTwichedPrefix(), 1)
 
   def _onLoadValues(self, *a, **kw):
     pass
 
-  def _twichedPrefix(self):
+  def _getTwichedPrefix(self):
     if self.useInstanceId:
-      return str(id(self))
+      if hasattr(self, '_twicedPrefix'):
+        return self._twicedPrefix
+      from random import randint
+      ri= randint(1, 10000)
+      res= str(id(self)) + str(self.__class__) + str(ri)
+      self._twicedPrefix= res
+      return res
     else:
-      return self.__class__
+      return str(self.__class__)
 
   def getValues(self, *a, **kw):
     res, key, cached= self._loadValues(*a, **kw)
