@@ -30,6 +30,7 @@
 #   http://en.wubook.net/
 #
 
+from random import randint
 import logging
 import memcache
 def _mc():
@@ -102,13 +103,15 @@ def cache(func, prefix= '', skipfirst= 0):
 
 class Twiched:
   """ Simply Sublass Providing _loadValues() """
-  def __init__(self, twichedSetUp= None, useInstanceId= 1):
+  def __init__(self, twichedSetUp= None, useInstanceId= 1, initValue= None):
     self.keys= set()
     self.useInstanceId= useInstanceId
     if twichedSetUp:
       key= key_values(self._loadValues, self._getTwichedPrefix(), 1)
       mc.set(str(hash(key)), twichedSetUp)
     self._loadValues= cache(self._loadValues, self._getTwichedPrefix(), 1)
+    if initValue:
+      self._initValue= initValue
 
   def _onLoadValues(self, *a, **kw):
     pass
@@ -117,7 +120,6 @@ class Twiched:
     if self.useInstanceId:
       if hasattr(self, '_twicedPrefix'):
         return self._twicedPrefix
-      from random import randint
       ri= randint(1, 10000)
       res= str(id(self)) + str(self.__class__) + str(ri)
       self._twicedPrefix= res
@@ -126,6 +128,8 @@ class Twiched:
       return str(self.__class__)
 
   def getValues(self, *a, **kw):
+    if hasattr(self, '_initValue') and self._initValue:
+      return self._initValue
     res, key, cached= self._loadValues(*a, **kw)
     if not cached:# or not getattr(self, '_twichedInitialized', False):
       self._onLoadValues(res)
@@ -134,6 +138,8 @@ class Twiched:
     return res
 
   def refresh(self):
+    if hasattr(self, '_initValue'):
+      self._initValue= None
     mc.mc.delete_multi(self.keys)
     self.keys= set()
 
