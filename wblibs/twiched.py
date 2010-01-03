@@ -94,7 +94,7 @@ def cache(func, prefix= '', skipfirst= 0):
     t= key_values(func, prefix, skipfirst, *a, **kw)
     key= str(hash(t))
     obj = mc.get(key)
-    if not obj:
+    if obj is None:
       ret = func(*a, **kw)
       mc.set(key, ret)
       return ret, key, False
@@ -128,7 +128,7 @@ class Twiched:
       return str(self.__class__)
 
   def getValues(self, *a, **kw):
-    if hasattr(self, '_initValue') and self._initValue:
+    if hasattr(self, '_initValue') and self._initValue is not None:
       return self._initValue
     res, key, cached= self._loadValues(*a, **kw)
     if not cached:# or not getattr(self, '_twichedInitialized', False):
