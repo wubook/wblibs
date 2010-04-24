@@ -73,7 +73,7 @@ def key_values(f, prefix, skipfirst, *a, **kw):
   fname= f.__name__
   if not a and not kw:
     return (fname, prefix,)
-  varnames= f.func_code.co_varnames
+  varnames= f.func_code.co_varnames[:f.func_code.co_argcount]
   if skipfirst:
     varnames= varnames[1:]
   vardefas= f.func_defaults or {}
