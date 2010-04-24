@@ -70,14 +70,15 @@ class TwichedMc:
 mc= TwichedMc()
 
 def key_values(f, prefix, skipfirst, *a, **kw):
+  fname= f.__name__
   if not a and not kw:
-    return (prefix,)
+    return (fname, prefix,)
   varnames= f.func_code.co_varnames
   if skipfirst:
     varnames= varnames[1:]
   vardefas= f.func_defaults or {}
   n= len(varnames) - len(vardefas)
-  t= [prefix]
+  t= [fname, prefix]
   i= -1
   for i, ar in enumerate(a):
     t.append(ar)
@@ -94,12 +95,17 @@ def cache(func, prefix= '', skipfirst= 0):
     t= key_values(func, prefix, skipfirst, *a, **kw)
     key= str(hash(t))
     obj = mc.get(key)
-    if obj is None:
-      ret = func(*a, **kw)
-      mc.set(key, ret)
-      return ret, key, False
-    return obj, key, True
+    if obj is not None:
+      return obj, key, True
+    ret = func(*a, **kw)
+    mc.set(key, ret)
+    return ret, key, False
   return _
+
+def uncache(func, *a, **kw):
+  t= key_values(func, '', 0, *a, **kw)
+  key= str(hash(t))
+  mc.mc.delete(key)
 
 class Twiched:
   """ Simply Sublass Providing _loadValues() """
