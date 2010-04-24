@@ -90,17 +90,24 @@ def key_values(f, prefix, skipfirst, *a, **kw):
     t.append(v)
   return tuple(t)
 
-def cache(func, prefix= '', skipfirst= 0):
+def cache(func, prefix= '', skipfirst= 0, normalreturn= 0):
   def _(*a, **kw):
     t= key_values(func, prefix, skipfirst, *a, **kw)
     key= str(hash(t))
     obj = mc.get(key)
     if obj is not None:
-      return obj, key, True
+      if not normalreturn:
+        return obj, key, True
+      return obj
     ret = func(*a, **kw)
     mc.set(key, ret)
-    return ret, key, False
+    if not normalreturn:
+      return ret, key, False
+    else: return ret
   return _
+
+def ncache(func, prefix= '', skipfirst= 0):
+  return cache(func, prefix, skipfirst, 1)
 
 def uncache(func, *a, **kw):
   t= key_values(func, '', 0, *a, **kw)
