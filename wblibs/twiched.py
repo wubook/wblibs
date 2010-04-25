@@ -69,7 +69,7 @@ class TwichedMc:
 
 mc= TwichedMc()
 
-def key_values(f, prefix, skipfirst, *a, **kw):
+def key_values(f, prefix, skipfirst, skipkeys, *a, **kw):
   fname= f.__name__
   if not a and not kw:
     return (fname, prefix,)
@@ -80,19 +80,23 @@ def key_values(f, prefix, skipfirst, *a, **kw):
   n= len(varnames) - len(vardefas)
   t= [fname, prefix]
   i= -1
-  for i, ar in enumerate(a):
+  for i, ar in enumerate(a[:n]):
     t.append(ar)
   if skipfirst:
     j= i+ 1
   else: j= i
   for ar in varnames[i+1:]:
-    v= ar in kw and kw[ar] or vardefas[j-n]
+    if ar in skipkeys or ar not in kw: 
+      v= vardefas[j-n]
+    else:
+      v= kw[ar]
+    #v= ar in kw and kw[ar] or vardefas[j-n]
     t.append(v)
   return tuple(t)
 
-def cache(func, prefix= '', skipfirst= 0, normalreturn= 0):
+def cache(func, prefix= '', skipfirst= 0, normalreturn= 0, skipkeys= []):
   def _(*a, **kw):
-    t= key_values(func, prefix, skipfirst, *a, **kw)
+    t= key_values(func, prefix, skipfirst, skipkeys, *a, **kw)
     key= str(hash(t))
     obj = mc.get(key)
     if obj is not None:
@@ -106,15 +110,16 @@ def cache(func, prefix= '', skipfirst= 0, normalreturn= 0):
     else: return ret
   return _
 
-def ncache(func, prefix= '', skipfirst= 0):
-  return cache(func, prefix, skipfirst, 1)
+def ncache(func, prefix= '', skipfirst= 0, skipkeys= []):
+  return cache(func, prefix, skipfirst, 1, skipkeys)
 
 def uncache(func, *a, **kw):
-  t= key_values(func, '', 0, *a, **kw)
+  t= key_values(func, '', 0, [], *a, **kw)
   key= str(hash(t))
   mc.mc.delete(key)
 
 class Twiched:
+  """ DON'T USE, UNSTABLE """
   """ Simply Sublass Providing _loadValues() """
   def __init__(self, twichedSetUp= None, useInstanceId= 1, initValue= None):
     self.keys= set()
