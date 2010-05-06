@@ -33,8 +33,9 @@
 from random import randint
 import logging
 import memcache
+_mserver= ['127.0.0.1:11211']
 def _mc():
-  mc = memcache.Client(['127.0.0.1:11211'], debug=0)
+  mc = memcache.Client(_mserver, debug=0)
   return mc
 
 mc= _mc()
@@ -166,3 +167,6 @@ class Foo(Twiched):
   def _loadValues(self, *a, **kw):
     return [1,2,3]
 
+def setServer(s):
+  global _mserver
+  _mserver= s
