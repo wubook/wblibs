@@ -33,22 +33,25 @@
 from random import randint
 import logging
 import memcache
-_mserver= ['127.0.0.1:11211']
-def _mc():
-  mc = memcache.Client(_mserver, debug=0)
-  return mc
+_mserver= (['127.0.0.1:11211'], 0)
+#def _mc():
+  #mc = memcache.Client(_mserver, debug=0)
+  #return mc
 
-mc= _mc()
+#mc= _mc()
 
 class TwichedMc:
+  _mserver= '127.0.0.1'
+  _mport= '11211'
 
-  def __init__(self, h= '127.0.0.1', p= 11211, d= 0):
-    self.s= ['%s:%d' % (h,p)], d
-    self.mc = memcache.Client(*self.s)
+  def __init__(self):
+    #self.s= ['%s:%d' % (h,p)], d
+    #self.s= ['%s:%d' % (h,p)], d
+    self.mc = memcache.Client(*_mserver)
 
   def reinit(self):
     logging.debug('Reinitializing Memcache Client...')
-    self.mc = memcache.Client(*self.s)
+    self.mc = memcache.Client(*_mserver)
 
   def connected(self):
     return self.mc.servers[0].socket
@@ -68,7 +71,14 @@ class TwichedMc:
     except:
       self.reinit()
 
-mc= TwichedMc()
+#mc= TwichedMc()
+mc= None
+def initTwiched(mserver= None):
+  if mserver:
+    global _mserver
+    _mserver= mserver
+  global mc
+  mc= TwichedMc()
 
 def key_values(f, prefix, skipfirst, skipkeys, *a, **kw):
   fname= f.__name__
