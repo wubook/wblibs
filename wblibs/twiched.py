@@ -86,7 +86,7 @@ def initTwiched(mserver= None, mfile= None, dontkill= False):
     pfile= bfile + '.pid'
     if not dontkill:
       os.system('kill `cat %s`' % pfile)
-    os.system('memcached -s %s -d -p %s' % (ufile, pfile))
+    os.system('memcached -s %s -d -P %s' % (ufile, pfile))
 
 def key_values(f, prefix, skipfirst, skipkeys, *a, **kw):
   fname= f.__name__
