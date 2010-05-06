@@ -73,12 +73,20 @@ class TwichedMc:
 
 #mc= TwichedMc()
 mc= None
-def initTwiched(mserver= None):
+def initTwiched(mserver= None, mfile= None, dontkill= False):
   if mserver:
     global _mserver
     _mserver= mserver
   global mc
   mc= TwichedMc()
+  if mfile:
+    import os
+    bfile= os.path.abspath(mfile)
+    ufile= bfile + '.unix'
+    pfile= bfile + '.pid'
+    if not dontkill:
+      os.system('kill `cat %s`' % pfile)
+    os.system('memcached -s %s -d -p %s' % (ufile, pfile))
 
 def key_values(f, prefix, skipfirst, skipkeys, *a, **kw):
   fname= f.__name__
