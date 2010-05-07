@@ -84,7 +84,7 @@ def initTwiched(mserver= None, mfile= None, dontkill= False):
     bfile= os.path.abspath(mfile)
     ufile= bfile + '.unix'
     pfile= bfile + '.pid'
-    if not dontkill:
+    if not dontkill and os.path.isfile(pfile):
       os.system('kill `cat %s`' % pfile)
     os.system('memcached -s %s -d -P %s' % (ufile, pfile))
 
