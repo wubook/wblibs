@@ -91,13 +91,13 @@ def key_values(f, prefix, skipkeys, *a, **kw):
     return str(res)
 
   fname= f.__name__
-  covars= f.func_code.co_varnames
+  covars= f.func_code.co_varnames[:f.func_code.co_argcount]
   if not covars or (not a and not kw):
     return _s(tuple())
 
   tmp= []
   la= len(a)
-  fdefs= f.func_defaults
+  fdefs= f.func_defaults or []
   offs= len(covars) - len(fdefs)
   for n,k in enumerate(covars):
     if la > n:
@@ -126,6 +126,5 @@ def ncache(func, prefix= '', skipkeys= [], normalreturn= 1):
   return cache(func, prefix, normalreturn, skipkeys)
 
 def uncache(func, *a, **kw):
-  key= key_values(func, '', 0, [], *a, **kw)
+  key= key_values(func, '', [], *a, **kw)
   mc.mc.delete(key)
-
