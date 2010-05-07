@@ -33,25 +33,22 @@
 from random import randint
 import logging
 import memcache
-_mserver= (['127.0.0.1:11211'], 0)
-#def _mc():
-  #mc = memcache.Client(_mserver, debug=0)
-  #return mc
+_mserver= ['127.0.0.1:11211']
+def _mc():
+  mc = memcache.Client(_mserver, debug=0)
+  return mc
 
-#mc= _mc()
+mc= _mc()
 
 class TwichedMc:
-  _mserver= '127.0.0.1'
-  _mport= '11211'
 
-  def __init__(self):
-    #self.s= ['%s:%d' % (h,p)], d
-    #self.s= ['%s:%d' % (h,p)], d
-    self.mc = memcache.Client(*_mserver)
+  def __init__(self, h= '127.0.0.1', p= 11211, d= 0):
+    self.s= ['%s:%d' % (h,p)], d
+    self.mc = memcache.Client(*self.s)
 
   def reinit(self):
     logging.debug('Reinitializing Memcache Client...')
-    self.mc = memcache.Client(*_mserver)
+    self.mc = memcache.Client(*self.s)
 
   def connected(self):
     return self.mc.servers[0].socket
@@ -71,22 +68,7 @@ class TwichedMc:
     except:
       self.reinit()
 
-#mc= TwichedMc()
-mc= None
-def initTwiched(mserver= None, mfile= None, dontkill= False):
-  if mserver:
-    global _mserver
-    _mserver= mserver
-  global mc
-  mc= TwichedMc()
-  if mfile:
-    import os
-    bfile= os.path.abspath(mfile)
-    ufile= bfile + '.unix'
-    pfile= bfile + '.pid'
-    if not dontkill:
-      os.system('kill `cat %s`' % pfile)
-    os.system('memcached -s %s -d -p %s' % (ufile, pfile))
+mc= TwichedMc()
 
 def key_values(f, prefix, skipfirst, skipkeys, *a, **kw):
   fname= f.__name__
