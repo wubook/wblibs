@@ -34,15 +34,8 @@ from random import randint
 import logging
 import memcache
 _mserver= (['127.0.0.1:11211'], 0)
-#def _mc():
-  #mc = memcache.Client(_mserver, debug=0)
-  #return mc
-
-#mc= _mc()
 
 class TwichedMc:
-  _mserver= '127.0.0.1'
-  _mport= '11211'
 
   def __init__(self):
     #self.s= ['%s:%d' % (h,p)], d
@@ -88,35 +81,35 @@ def initTwiched(mserver= None, mfile= None, dontkill= False):
       os.system('kill `cat %s`' % pfile)
     os.system('memcached -s %s -d -P %s' % (ufile, pfile))
 
-def key_values(f, prefix, skipfirst, skipkeys, *a, **kw):
-  fname= f.__name__
-  if not a and not kw:
-    return (fname, prefix,)
-  varnames= f.func_code.co_varnames[:f.func_code.co_argcount]
-  if skipfirst:
-    varnames= varnames[1:]
-  vardefas= f.func_defaults or {}
-  n= len(varnames) - len(vardefas)
-  t= [fname, prefix]
-  i= -1
-  for i, ar in enumerate(a[:n]):
-    t.append(ar)
-  if skipfirst:
-    j= i+ 1
-  else: j= i
-  for ar in varnames[i+1:]:
-    if ar in skipkeys or ar not in kw: 
-      v= vardefas[j-n]
-    else:
-      v= kw[ar]
-    #v= ar in kw and kw[ar] or vardefas[j-n]
-    t.append(v)
-  return tuple(t)
+def initUnixTwiched(tfile):
+  initTwiched((['unix:%s.unix' % tfile],0), tfile)
 
-def cache(func, prefix= '', skipfirst= 0, normalreturn= 0, skipkeys= []):
+def key_values(f, prefix, skipkeys, *a, **kw):
+  def _s(t):
+    print (f.__name__, prefix) + t
+    res= hash((f.__name__, prefix) + t )
+    return str(res)
+
+  fname= f.__name__
+  covars= f.func_code.co_varnames
+  if not covars or (not a and not kw):
+    return _s(tuple())
+
+  tmp= []
+  la= len(a)
+  fdefs= f.func_defaults
+  offs= len(covars) - len(fdefs)
+  for n,k in enumerate(covars):
+    if la > n:
+      tmp.append(a[n])
+    else:
+      if k in kw: tmp.append(kw[k])
+      else: tmp.append( fdefs[n-offs] )
+  return _s(tuple(tmp))
+
+def cache(func, prefix= '', normalreturn= 0, skipkeys= []):
   def _(*a, **kw):
-    t= key_values(func, prefix, skipfirst, skipkeys, *a, **kw)
-    key= str(hash(t))
+    key= key_values(func, prefix, skipkeys, *a, **kw)
     obj = mc.get(key)
     if obj is not None:
       if not normalreturn:
@@ -129,62 +122,10 @@ def cache(func, prefix= '', skipfirst= 0, normalreturn= 0, skipkeys= []):
     else: return ret
   return _
 
-def ncache(func, prefix= '', skipfirst= 0, skipkeys= []):
-  return cache(func, prefix, skipfirst, 1, skipkeys)
+def ncache(func, prefix= '', skipkeys= [], normalreturn= 1):
+  return cache(func, prefix, normalreturn, skipkeys)
 
 def uncache(func, *a, **kw):
-  t= key_values(func, '', 0, [], *a, **kw)
-  key= str(hash(t))
+  key= key_values(func, '', 0, [], *a, **kw)
   mc.mc.delete(key)
 
-class Twiched:
-  """ DON'T USE, UNSTABLE """
-  """ Simply Sublass Providing _loadValues() """
-  def __init__(self, twichedSetUp= None, useInstanceId= 1, initValue= None):
-    self.keys= set()
-    self.useInstanceId= useInstanceId
-    if twichedSetUp:
-      key= key_values(self._loadValues, self._getTwichedPrefix(), 1)
-      mc.set(str(hash(key)), twichedSetUp)
-    self._loadValues= cache(self._loadValues, self._getTwichedPrefix(), 1)
-    if initValue:
-      self._initValue= initValue
-
-  def _onLoadValues(self, *a, **kw):
-    pass
-
-  def _getTwichedPrefix(self):
-    if self.useInstanceId:
-      if hasattr(self, '_twicedPrefix'):
-        return self._twicedPrefix
-      ri= randint(1, 10000)
-      res= str(id(self)) + str(self.__class__) + str(ri)
-      self._twicedPrefix= res
-      return res
-    else:
-      return str(self.__class__)
-
-  def getValues(self, *a, **kw):
-    if hasattr(self, '_initValue') and self._initValue is not None:
-      return self._initValue
-    res, key, cached= self._loadValues(*a, **kw)
-    if not cached:# or not getattr(self, '_twichedInitialized', False):
-      self._onLoadValues(res)
-    #self._twichedInitialized= 1
-    self.keys.add(key)
-    return res
-
-  def refresh(self):
-    if hasattr(self, '_initValue'):
-      self._initValue= None
-    mc.mc.delete_multi(self.keys)
-    self.keys= set()
-
-
-class Foo(Twiched):
-  def _loadValues(self, *a, **kw):
-    return [1,2,3]
-
-def setServer(s):
-  global _mserver
-  _mserver= s
