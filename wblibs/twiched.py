@@ -83,7 +83,6 @@ def initNetTwiched(host= '127.0.0.1', port= 11211):
 
 def key_values(f, prefix, skipkeys, *a, **kw):
   def _s(t):
-    print (f.__name__, prefix) + t
     res= hash((f.__name__, prefix) + t )
     return str(res)
 
