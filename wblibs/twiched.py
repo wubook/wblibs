@@ -64,7 +64,7 @@ def launchMemCached(mfile, dontkill= False):
   pfile= bfile + '.pid'
   if not dontkill and os.path.isfile(pfile):
     os.system('kill `cat %s`' % pfile)
-  os.system('memcached -s %s -d -P %s' % (ufile, pfile))
+  os.system('memcached -s %s -d -P %s 2>/dev/null' % (ufile, pfile))
 
 def initTwiched(mserver= None, mfile= None, dontkill= False):
   if mserver:
